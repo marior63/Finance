@@ -1,0 +1,52 @@
+import pandas as pd
+import yfinance as yf
+
+def get_historical_data(ticker, period="1mo", interval="1d"):
+    stock_data = yf.download(ticker, period=period, interval=interval)
+    return stock_data
+
+def calculate_stochastic(stock_data, k_period=8, k_smoothing=3, d_period=3):
+    # Calculate the lowest low and highest high over the lookback period (k_period)
+    stock_data['Low_K'] = stock_data['Low'].rolling(window=k_period).min()
+    stock_data['High_K'] = stock_data['High'].rolling(window=k_period).max()
+    
+    # Calculate %K
+    stock_data['%K'] = 100 * ((stock_data['Close'] - stock_data['Low_K']) / (stock_data['High_K'] - stock_data['Low_K']))
+    
+    # Apply %K smoothing
+    stock_data['%K_Smoothed'] = stock_data['%K'].rolling(window=k_smoothing).mean()
+    
+    # Calculate %D
+    stock_data['%D'] = stock_data['%K_Smoothed'].rolling(window=d_period).mean()
+    
+    return stock_data
+
+def print_stochastic_value(stock_data):
+    latest_data = stock_data.iloc[-1]
+    k_value = latest_data['%K_Smoothed']
+    d_value = latest_data['%D']
+
+    print(f"Latest Stochastic Oscillator values:")
+    print(f"%K Smoothed: {latest_data['%K_Smoothed']:.2f}")
+    print(f"%D: {latest_data['%D']:.2f}")
+
+    if k_value > 70:
+        print("Overbought")
+    elif k_value < 30:
+        print("Oversold")
+    else:
+        print("Neither")
+
+if __name__ == "__main__":
+    while True:
+        ticker = input("Enter the stock ticker symbol: ").upper()
+
+
+        stock_data = get_historical_data(ticker)
+        stock_data = calculate_stochastic(stock_data)
+
+        print_stochastic_value(stock_data)
+
+        another = input("Do you want to check another ticker? (yes/no): ").strip().lower()
+        if another != 'yes':
+            break
