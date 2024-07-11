@@ -1,0 +1,76 @@
+import pandas as pd
+import yfinance as yf
+import xlwings as xw
+from datetime import datetime, timedelta
+
+
+def get_next_earnings_date(ticker):
+    stock = yf.Ticker(ticker)
+    try:
+        earnings_dates = stock.earnings_dates
+        if not earnings_dates.empty:
+            now = datetime.now().replace(tzinfo=None)
+            for date in earnings_dates.index:
+                if now <= date.replace(tzinfo=None) <= now + timedelta(days=90):
+                    return date.strftime('%Y-%m-%d')
+    except Exception as e:
+        print(f"Error fetching earnings date for {ticker}: {e}")
+    return 'N/A'
+
+
+def get_current_price(ticker):
+    stock = yf.Ticker(ticker)
+    try:
+        current_price = stock.history(period="1d")['Close'].iloc[0]
+        return round(current_price, 2)
+    except Exception as e:
+        print(f"Error fetching current price for {ticker}: {e}")
+    return 'N/A'
+
+
+file_path = r'excel_file_name.xlsx'  #right click the excel file and selcet 'copy path'; paste inside the ' ' 
+sheet_name = 'Sheet_name_in_excel'   #put the name of the sheet in the excel file that contains the ticker symbols
+
+
+wb = xw.Book(file_path)
+sheet = wb.sheets[sheet_name]
+
+
+ticker_range = 'A2:A57'  #adjust the range according to ticker symbol location
+tickers = sheet.range(ticker_range).value
+
+
+print(f"Tickers read from Excel: {tickers}")
+
+
+earnings_dates = []
+current_prices = []
+
+
+for ticker in tickers:
+    if ticker:  
+        earnings_date = get_next_earnings_date(ticker)
+        earnings_dates.append(earnings_date)
+        
+        current_price = get_current_price(ticker)
+        current_prices.append(current_price)
+    else:
+        earnings_dates.append('N/A')
+        current_prices.append('N/A')
+
+
+print(f"Earnings dates to be written: {earnings_dates}")
+print(f"Current prices to be written: {current_prices}")
+
+
+earnings_date_range = 'C2'  #select where you want the result to be placed in excel
+current_price_range = 'G2'  #select where you want the result to be placed in excel
+sheet.range(earnings_date_range).options(transpose=True).value = earnings_dates
+sheet.range(current_price_range).options(transpose=True).value = current_prices
+
+
+wb.save()
+wb.close()
+
+
+print("Excel sheet updated successfully.")
