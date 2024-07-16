@@ -1,0 +1,41 @@
+import yfinance as yf
+from datetime import datetime, timedelta
+
+def get_option_chain_bid_ask_spread(ticker_symbol):
+    
+    stock = yf.Ticker(ticker_symbol)
+    
+    
+    expiration_dates = stock.options
+    
+    
+    one_week_away = datetime.now() + timedelta(weeks=1)
+    valid_dates = [date for date in expiration_dates if datetime.strptime(date, '%Y-%m-%d') >= one_week_away]
+    
+    if not valid_dates:
+        print("No valid expiration dates at least one week away.")
+        return
+    
+    
+    expiration_date = valid_dates[0]
+    
+    
+    option_chain = stock.option_chain(expiration_date)
+    
+    
+    print(f"Calls for expiration date {expiration_date}:")
+    calls = option_chain.calls
+    calls['bid_ask_spread'] = calls['ask'] - calls['bid']
+    print(calls[['contractSymbol', 'strike', 'bid', 'ask', 'bid_ask_spread']])
+    print("\n")
+    
+    
+    print(f"Puts for expiration date {expiration_date}:")
+    puts = option_chain.puts
+    puts['bid_ask_spread'] = puts['ask'] - puts['bid']
+    print(puts[['contractSymbol', 'strike', 'bid', 'ask', 'bid_ask_spread']])
+    print("\n")
+
+
+ticker_symbol = "AAPL"  
+get_option_chain_bid_ask_spread(ticker_symbol)
